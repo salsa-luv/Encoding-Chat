@@ -1,0 +1,1291 @@
+<!DOCTYPE html>
+<html lang="en" class="dark h-full bg-slate-950 text-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BitMessenger — Data Communication Simulation</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        slate: {
+                            850: '#131e32',
+                            950: '#0a0f1d'
+                        },
+                        cyan: {
+                            450: '#00d5f2'
+                        }
+                    },
+                    fontFamily: {
+                        mono: ['Fira Code', 'Consolas', 'Monaco', 'Courier New', 'monospace'],
+                        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Custom Styles & Animations -->
+    <style>
+        /* Custom scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(51, 65, 85, 0.8);
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(71, 85, 105, 1);
+        }
+
+        /* Pulse animations for bit packet transmission */
+        @keyframes bitPulse {
+            0% { transform: scale(0.95); opacity: 0.7; }
+            50% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(0.95); opacity: 0.7; }
+        }
+        .animate-bit-pulse {
+            animation: bitPulse 2s infinite ease-in-out;
+        }
+
+        @keyframes dataFlow {
+            0% { stroke-dashoffset: 24; }
+            100% { stroke-dashoffset: 0; }
+        }
+        .flow-line {
+            stroke-dasharray: 6;
+            animation: dataFlow 1s linear infinite;
+        }
+
+        /* Bit chip styling */
+        .bit-chip {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .bit-chip:hover {
+            transform: translateY(-2px);
+        }
+
+        /* Custom glow effects */
+        .glow-cyan {
+            box-shadow: 0 0 15px -3px rgba(6, 182, 212, 0.35);
+        }
+        .glow-emerald {
+            box-shadow: 0 0 15px -3px rgba(16, 185, 129, 0.35);
+        }
+        .glow-rose {
+            box-shadow: 0 0 15px -3px rgba(244, 63, 94, 0.35);
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col font-sans overflow-hidden bg-slate-950 text-slate-100 antialiased selection:bg-cyan-500 selection:text-slate-950">
+
+    <!-- Top Educational Simulation Notice Banner -->
+    <header class="bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 border-b border-slate-800/80 px-4 py-2 flex items-center justify-between text-xs z-20 shrink-0">
+        <div class="flex items-center space-x-2">
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 uppercase tracking-wider">
+                Academic Tool
+            </span>
+            <span class="text-slate-300 font-medium hidden sm:inline">Jaringan Komputer & Komunikasi Data</span>
+            <span class="text-slate-500 hidden sm:inline">•</span>
+            <span class="text-slate-400 italic">"Chat normally. Understand how your data travels."</span>
+        </div>
+        <div class="flex items-center space-x-3">
+            <span class="text-amber-400/90 text-[11px] flex items-center gap-1 font-mono">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                Simulation only — no real network transmission
+            </span>
+            <button onclick="toggleInfoModal(true)" class="text-slate-400 hover:text-slate-200 transition-colors p-1" title="Pipeline Guide">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Application Container -->
+    <div class="flex-1 flex overflow-hidden relative">
+
+        <!-- Left Sidebar: Contacts & Search -->
+        <aside id="sidebar" class="w-80 bg-slate-900 border-r border-slate-800 flex flex-col z-10 absolute inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 ease-in-out">
+            <!-- App Brand & Title -->
+            <div class="p-4 border-b border-slate-800 flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-600 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-950/50">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-slate-100 text-base leading-none flex items-center gap-1.5">
+                            BitMessenger
+                            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        </h1>
+                        <p class="text-[11px] text-slate-400 mt-1">Data Comm Simulator</p>
+                    </div>
+                </div>
+                <button onclick="toggleSidebar(false)" class="md:hidden text-slate-400 hover:text-slate-200">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <!-- Contacts Search Bar -->
+            <div class="p-3 border-b border-slate-800/60">
+                <div class="relative">
+                    <svg class="w-4 h-4 absolute left-3 top-2.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    <input type="text" id="searchInput" oninput="filterContacts()" placeholder="Search chats..." class="w-full bg-slate-950 border border-slate-800 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all">
+                </div>
+            </div>
+
+            <!-- Contacts List -->
+            <div id="contactsList" class="flex-1 overflow-y-auto divide-y divide-slate-800/40">
+                <!-- Dynamic contact cards populated by JS -->
+            </div>
+
+            <!-- Global Encoding & Parity Quick Control Footer -->
+            <div class="p-3 bg-slate-950 border-t border-slate-800 text-xs space-y-2">
+                <div class="flex items-center justify-between text-[11px] text-slate-400 font-semibold uppercase tracking-wider">
+                    <span>Transmission Settings</span>
+                    <span id="settingsStatusBadge" class="text-cyan-400">ASCII • EVEN</span>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-[10px] text-slate-400 mb-1">Encoding</label>
+                        <select id="globalEncoding" onchange="updateSettings()" class="w-full bg-slate-900 border border-slate-700/80 rounded px-2 py-1 text-xs text-slate-200 focus:outline-none focus:border-cyan-500">
+                            <option value="ASCII">ASCII (7-bit)</option>
+                            <option value="Unicode">Unicode</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-slate-400 mb-1">Parity Bit</label>
+                        <select id="globalParity" onchange="updateSettings()" class="w-full bg-slate-900 border border-slate-700/80 rounded px-2 py-1 text-xs text-slate-200 focus:outline-none focus:border-cyan-500">
+                            <option value="EVEN">Even Parity</option>
+                            <option value="ODD">Odd Parity</option>
+                            <option value="NONE">None</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Right Chat Interface -->
+        <main class="flex-1 flex flex-col bg-slate-950 relative min-w-0">
+
+            <!-- Active Contact Header -->
+            <div class="h-16 bg-slate-900 border-b border-slate-800 px-4 flex items-center justify-between shrink-0">
+                <div class="flex items-center space-x-3 min-w-0">
+                    <button onclick="toggleSidebar(true)" class="md:hidden text-slate-400 hover:text-slate-200 mr-1">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                    </button>
+                    <div id="activeAvatar" class="w-10 h-10 rounded-full bg-cyan-600 flex items-center justify-center font-bold text-slate-950 shrink-0">
+                        A
+                    </div>
+                    <div class="truncate">
+                        <h2 id="activeName" class="font-semibold text-slate-100 text-sm truncate">Alice</h2>
+                        <div class="flex items-center space-x-1.5 text-xs text-slate-400">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                            <span id="activeStatus">Online • Simulation Mode</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Control Quick Bar -->
+                <div class="flex items-center space-x-3 text-xs">
+                    <label class="hidden lg:flex items-center space-x-2 cursor-pointer bg-slate-800/80 px-2.5 py-1.5 rounded-lg border border-slate-700/60">
+                        <input type="checkbox" id="animToggle" checked class="rounded bg-slate-900 border-slate-700 text-cyan-500 focus:ring-0">
+                        <span class="text-slate-300 font-medium">Anim Mode</span>
+                    </label>
+                    <button onclick="clearCurrentChat()" class="text-slate-400 hover:text-rose-400 p-1.5 rounded-lg hover:bg-slate-800 transition-colors" title="Clear chat history">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Chat Message Area -->
+            <div id="chatMessages" class="flex-1 overflow-y-auto p-4 space-y-4">
+                <!-- Dynamic Message Bubbles -->
+            </div>
+
+            <!-- Inline Error / Notification Bar -->
+            <div id="errorAlert" class="hidden mx-4 mb-2 p-2.5 rounded-lg bg-rose-950/80 border border-rose-800 text-rose-300 text-xs flex items-center justify-between animate-bounce">
+                <div class="flex items-center space-x-2">
+                    <svg class="w-4 h-4 text-rose-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <span id="errorMessage">Error message text</span>
+                </div>
+                <button onclick="hideError()" class="text-rose-400 hover:text-rose-200">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <!-- Message Input Area -->
+            <div class="p-3 bg-slate-900 border-t border-slate-800 shrink-0">
+                <form id="messageForm" onsubmit="handleSendMessage(event)" class="flex items-end space-x-2">
+                    <div class="flex-1 bg-slate-950 border border-slate-800 rounded-xl focus-within:border-cyan-500 focus-within:ring-1 focus-within:ring-cyan-500 transition-all p-2">
+                        <textarea id="messageInput" rows="1" placeholder="Type a message... (Press Enter to send, Shift+Enter for newline)" onkeydown="handleKeyDown(event)" class="w-full bg-transparent text-slate-100 placeholder-slate-500 text-sm focus:outline-none resize-none max-h-24"></textarea>
+                        <div class="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-900">
+                            <span>Mode: <strong id="inputModeIndicator" class="text-cyan-400 font-mono">ASCII (7-bit) + EVEN</strong></span>
+                            <span id="charCount">0 chars</span>
+                        </div>
+                    </div>
+                    <button type="submit" id="sendBtn" class="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold p-3 rounded-xl shadow-lg shadow-cyan-950/50 flex items-center justify-center transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                        <svg class="w-5 h-5 transform rotate-90" fill="currentColor" viewBox="0 0 20 20"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"></path></svg>
+                    </button>
+                </form>
+            </div>
+        </main>
+    </div>
+
+    <!-- TRANSMISSION DETAILS SLIDE-OVER DRAWER -->
+    <div id="detailsDrawer" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex justify-end transition-opacity opacity-0 pointer-events-none duration-300">
+        <div id="drawerContent" class="w-full max-w-2xl bg-slate-900 border-l border-slate-800 h-full flex flex-col shadow-2xl transform translate-x-full transition-transform duration-300 ease-out">
+            
+            <!-- Drawer Header -->
+            <div class="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-850">
+                <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 rounded-lg bg-cyan-500/20 border border-cyan-500/30 flex items-center justify-center text-cyan-400 font-mono font-bold text-xs">
+                        DATA
+                    </div>
+                    <div>
+                        <h3 class="font-semibold text-slate-100 text-base">Transmission Details</h3>
+                        <p class="text-xs text-slate-400">Data Communication Pipeline Breakdown</p>
+                    </div>
+                </div>
+                <button onclick="closeDetailsDrawer()" class="text-slate-400 hover:text-slate-200 p-1 rounded-lg hover:bg-slate-800">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <!-- Drawer Body -->
+            <div class="flex-1 overflow-y-auto p-5 space-y-6">
+
+                <!-- 1. Data Pipeline Visual Nodes Flow -->
+                <div class="bg-slate-950 rounded-xl p-4 border border-slate-800">
+                    <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Pipeline Flow</h4>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs">
+                        <div class="p-2 rounded bg-slate-900 border border-slate-800 text-slate-300">
+                            <span class="text-cyan-400 font-bold block">1. TEXT</span>
+                            <span id="pipeOriginal" class="font-mono text-[11px] text-slate-400 truncate block">...</span>
+                        </div>
+                        <div class="p-2 rounded bg-slate-900 border border-slate-800 text-slate-300">
+                            <span class="text-cyan-400 font-bold block">2. ENCODING</span>
+                            <span id="pipeEncMode" class="font-mono text-[11px] text-slate-400 block">ASCII</span>
+                        </div>
+                        <div class="p-2 rounded bg-slate-900 border border-slate-800 text-slate-300">
+                            <span class="text-cyan-400 font-bold block">3. PARITY</span>
+                            <span id="pipeParityMode" class="font-mono text-[11px] text-slate-400 block">Even Parity</span>
+                        </div>
+                        <div class="p-2 rounded bg-slate-900 border border-slate-800 text-slate-300">
+                            <span class="text-cyan-400 font-bold block">4. TRANSMIT</span>
+                            <span id="pipeStatus" class="font-mono text-[11px] text-emerald-400 block">Passed ✓</span>
+                        </div>
+                    </div>
+
+                    <!-- Flow Diagram -->
+                    <div class="mt-4 p-3 bg-slate-900/80 rounded-lg border border-slate-800 text-center relative overflow-hidden">
+                        <div class="flex items-center justify-between text-[11px] font-mono text-slate-400 space-x-1">
+                            <span class="px-2 py-1 bg-slate-800 rounded">MSG</span>
+                            <span class="text-cyan-500">➔</span>
+                            <span class="px-2 py-1 bg-slate-800 rounded">ENC</span>
+                            <span class="text-cyan-500">➔</span>
+                            <span class="px-2 py-1 bg-slate-800 rounded">BINARY</span>
+                            <span class="text-cyan-500">➔</span>
+                            <span class="px-2 py-1 bg-slate-800 rounded">PARITY</span>
+                            <span class="text-cyan-500">➔</span>
+                            <span class="px-2 py-1 bg-cyan-950 border border-cyan-800 text-cyan-300 rounded animate-pulse">CHANNEL</span>
+                            <span class="text-cyan-500">➔</span>
+                            <span class="px-2 py-1 bg-slate-800 rounded">CHECK</span>
+                            <span class="text-cyan-500">➔</span>
+                            <span class="px-2 py-1 bg-slate-800 rounded">DEC</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. Statistics Summary Cards -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div class="p-3 bg-slate-950 rounded-xl border border-slate-800">
+                        <div class="text-[10px] text-slate-500 uppercase font-bold">Length</div>
+                        <div id="statLength" class="text-lg font-mono font-bold text-slate-200">0 chars</div>
+                    </div>
+                    <div class="p-3 bg-slate-950 rounded-xl border border-slate-800">
+                        <div class="text-[10px] text-slate-500 uppercase font-bold">Data Bits</div>
+                        <div id="statDataBits" class="text-lg font-mono font-bold text-cyan-400">0 bits</div>
+                    </div>
+                    <div class="p-3 bg-slate-950 rounded-xl border border-slate-800">
+                        <div class="text-[10px] text-slate-500 uppercase font-bold">Parity Bits</div>
+                        <div id="statParityBits" class="text-lg font-mono font-bold text-purple-400">0 bits</div>
+                    </div>
+                    <div class="p-3 bg-slate-950 rounded-xl border border-slate-800">
+                        <div class="text-[10px] text-slate-500 uppercase font-bold">Total Bits</div>
+                        <div id="statTotalBits" class="text-lg font-mono font-bold text-emerald-400">0 bits</div>
+                    </div>
+                </div>
+
+                <!-- 3. Character Breakdown Table -->
+                <div class="bg-slate-950 rounded-xl p-4 border border-slate-800">
+                    <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Character Breakdown</h4>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs font-mono">
+                            <thead>
+                                <tr class="text-slate-500 border-b border-slate-800">
+                                    <th class="pb-2">Char</th>
+                                    <th class="pb-2">Code</th>
+                                    <th class="pb-2">Data Bits</th>
+                                    <th class="pb-2">Parity Bit</th>
+                                    <th class="pb-2">Final Stream</th>
+                                </tr>
+                            </thead>
+                            <tbody id="characterBreakdownBody" class="divide-y divide-slate-900 text-slate-300">
+                                <!-- Dynamic breakdown rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 4. Visual Bit Grid (Chips) -->
+                <div class="bg-slate-950 rounded-xl p-4 border border-slate-800">
+                    <div class="flex items-center justify-between mb-3">
+                        <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Bit Structure Visualization</h4>
+                        <div class="flex items-center space-x-3 text-[11px] font-mono">
+                            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-cyan-500"></span> Parity (P)</span>
+                            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-slate-700"></span> Data (D)</span>
+                        </div>
+                    </div>
+                    <div id="bitChipsContainer" class="flex flex-wrap gap-2">
+                        <!-- Dynamic bit chips -->
+                    </div>
+                </div>
+
+                <!-- 5. Final Bit Stream Output & Copy -->
+                <div class="bg-slate-950 rounded-xl p-4 border border-slate-800 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Final Transmitted Bit Stream</h4>
+                        <button onclick="copyBitStream()" class="text-xs bg-slate-800 hover:bg-slate-700 text-cyan-400 px-2.5 py-1 rounded-lg border border-slate-700 transition-colors flex items-center gap-1">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                            Copy Stream
+                        </button>
+                    </div>
+                    <div id="finalBitStreamBox" class="p-3 bg-slate-900 rounded-lg border border-slate-800 font-mono text-sm text-cyan-300 break-all leading-relaxed">
+                        00000000
+                    </div>
+                </div>
+
+                <!-- 6. Interactive Bit Error Simulation Sandbox -->
+                <div class="bg-slate-950 rounded-xl p-4 border border-slate-800 space-y-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Bit Error Simulation Sandbox</h4>
+                            <p class="text-[11px] text-slate-500">Test how parity detection handles single-bit alterations during transmission.</p>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button onclick="triggerBitFlip()" class="bg-amber-600/20 hover:bg-amber-600/30 text-amber-400 border border-amber-600/40 text-xs px-3 py-1.5 rounded-lg font-medium transition-all flex items-center gap-1">
+                                ⚡ Flip One Bit
+                            </button>
+                            <button onclick="resetBitError()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-2.5 py-1.5 rounded-lg border border-slate-700">
+                                Reset
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Comparison Box -->
+                    <div class="space-y-2 text-xs font-mono">
+                        <div>
+                            <span class="text-slate-500 block text-[10px]">ORIGINAL BIT STREAM:</span>
+                            <div id="originalStreamCompare" class="p-2 bg-slate-900/90 rounded border border-slate-800 text-slate-300 break-all">
+                                -
+                            </div>
+                        </div>
+                        <div>
+                            <span class="text-slate-500 block text-[10px]">RECEIVED BIT STREAM (IN CHANNEL):</span>
+                            <div id="receivedStreamCompare" class="p-2 bg-slate-900/90 rounded border border-slate-800 text-amber-300 break-all">
+                                -
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Parity Verification Status Badge -->
+                    <div id="parityCheckResultCard" class="p-3 rounded-lg border bg-emerald-950/40 border-emerald-800/80 text-emerald-300 text-xs flex items-center justify-between">
+                        <div class="flex items-center space-x-2">
+                            <span id="parityCheckIcon" class="text-base">✓</span>
+                            <div>
+                                <span id="parityCheckTitle" class="font-bold block">PARITY CHECK PASSED</span>
+                                <span id="parityCheckDesc" class="text-[11px] text-emerald-400/80">Data passed the selected parity check rule.</span>
+                            </div>
+                        </div>
+                        <span id="alteredBitCount" class="text-[11px] font-mono bg-emerald-900/60 px-2 py-0.5 rounded text-emerald-300">0 bits altered</span>
+                    </div>
+
+                    <!-- Decoding Result Display -->
+                    <div class="p-3 bg-slate-900 rounded-lg border border-slate-800 space-y-2">
+                        <div class="flex items-center justify-between text-xs">
+                            <span class="text-slate-400">Decoded Text Result:</span>
+                            <button id="decodeAnywayBtn" onclick="forceDecodeAnyway()" class="hidden text-[11px] bg-rose-950/60 hover:bg-rose-900 text-rose-300 border border-rose-800 px-2 py-0.5 rounded">
+                                Try Decode Anyway
+                            </button>
+                        </div>
+                        <div id="decodedTextResult" class="font-mono text-base text-cyan-300 font-bold">
+                            -
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Info Modal for Students -->
+    <div id="infoModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-200">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h3 class="font-bold text-slate-100 text-lg flex items-center gap-2">
+                    <span class="text-cyan-400">⚡</span> Data Communication Guide
+                </h3>
+                <button onclick="toggleInfoModal(false)" class="text-slate-400 hover:text-slate-200">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div class="text-xs text-slate-300 space-y-3 leading-relaxed max-h-96 overflow-y-auto pr-1">
+                <p>
+                    <strong class="text-cyan-400">What is BitMessenger?</strong><br>
+                    BitMessenger is an interactive simulation built for Computer Networks students. It demonstrates how text messages are encoded into binary code, protected with parity bits, transmitted across a simulated network channel, and decoded at the receiver side.
+                </p>
+                <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-1 font-mono text-[11px]">
+                    <div class="text-cyan-400 font-bold">ASCII Mode vs Unicode:</div>
+                    <div>• ASCII: 7 bits per character (0 to 127).</div>
+                    <div>• Unicode: Padded binary code points for universal characters.</div>
+                </div>
+                <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-1 font-mono text-[11px]">
+                    <div class="text-cyan-400 font-bold">Parity Bit Mechanics:</div>
+                    <div>• Format: <span class="text-cyan-400">[PARITY BIT]</span><span class="text-slate-400">[DATA BITS]</span></div>
+                    <div>• Even Parity: Parity bit is set so total 1s = EVEN.</div>
+                    <div>• Odd Parity: Parity bit is set so total 1s = ODD.</div>
+                </div>
+                <p class="text-slate-400 italic text-[11px]">
+                    Note: Parity bit error detection is an educational check for single-bit flips and does not provide encryption or error correction.
+                </p>
+            </div>
+            <button onclick="toggleInfoModal(false)" class="w-full bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold py-2 rounded-xl text-xs transition-colors">
+                Got it! Let's explore
+            </button>
+        </div>
+    </div>
+
+    <script>
+        /* Global State & Pre-populated Data */
+        const APP_STATE = {
+            activeContactId: 'alice',
+            encoding: 'ASCII',
+            parity: 'EVEN',
+            animation: true,
+            activeDrawerMsgId: null,
+            tempAlteredStream: null,
+            unverifiedDecode: false
+        };
+
+        // Pre-loaded dummy contacts
+        const CONTACTS = [
+            {
+                id: 'alice',
+                name: 'Alice',
+                avatarBg: 'bg-cyan-500 text-slate-950',
+                status: 'Online',
+                lastSeen: 'Active now'
+            },
+            {
+                id: 'bob',
+                name: 'Bob',
+                avatarBg: 'bg-emerald-500 text-slate-950',
+                status: 'Online',
+                lastSeen: 'Active 2m ago'
+            },
+            {
+                id: 'charlie',
+                name: 'Charlie',
+                avatarBg: 'bg-purple-500 text-slate-950',
+                status: 'Offline',
+                lastSeen: 'Offline'
+            }
+        ];
+
+        // Storage for messages with pre-populated history
+        let messagesStore = {
+            alice: [],
+            bob: [],
+            charlie: []
+        };
+
+        /* Initialization */
+        window.onload = function() {
+            try {
+                loadHistoryFromLocalStorage();
+            } catch (err) {
+                console.warn("LocalStorage access failed. Running with in-memory state.", err);
+            }
+
+            // Seed default messages if empty
+            if (!messagesStore.alice || messagesStore.alice.length === 0) {
+                seedInitialMessages();
+            }
+
+            renderContactsList();
+            switchContact('alice');
+            updateSettingsUI();
+        };
+
+        // Seed initial history with test cases (e.g. SALSA, HELLO)
+        function seedInitialMessages() {
+            messagesStore = {
+                alice: [
+                    createMessageObj('alice', 'Alice', 'Hai! Sudah coba BitMessenger?', 'ASCII', 'EVEN', 'received', '14:20'),
+                    createMessageObj('user', 'Me', 'SALSA', 'ASCII', 'EVEN', 'received', '14:21'),
+                    createMessageObj('alice', 'Alice', 'Seru juga ya 😭', 'Unicode', 'EVEN', 'received', '14:22')
+                ],
+                bob: [
+                    createMessageObj('bob', 'Bob', 'HELLO', 'ASCII', 'EVEN', 'received', '10:05'),
+                    createMessageObj('user', 'Me', 'Computer Networks!', 'ASCII', 'EVEN', 'received', '10:06')
+                ],
+                charlie: [
+                    createMessageObj('charlie', 'Charlie', 'BitMessenger Test', 'ASCII', 'ODD', 'received', '09:12')
+                ]
+            };
+            saveHistoryToLocalStorage();
+        }
+
+
+        /**
+         * Core Function: Encodes a single character according to selected mode & parity
+         * PARITY BIT IS PLACED AT THE FRONT: [PARITY BIT][DATA BITS]
+         */
+        function encodeCharacter(char, encodingMode, parityMode) {
+            const codePoint = char.codePointAt(0);
+
+            if (encodingMode === 'ASCII' && codePoint > 127) {
+                throw new Error(`Character '${char}' is not supported in ASCII mode. Switch to Unicode mode.`);
+            }
+
+            let dataBits = '';
+            if (encodingMode === 'ASCII') {
+                dataBits = codePoint.toString(2).padStart(7, '0');
+            } else {
+                // Unicode mode
+                dataBits = codePoint.toString(2);
+                // Pad to 8 bits if <= 255, else pad to 16 bits
+                const targetLen = codePoint <= 255 ? 8 : 16;
+                dataBits = dataBits.padStart(targetLen, '0');
+            }
+
+            // Count number of '1's in data bits
+            const onesCount = (dataBits.match(/1/g) || []).length;
+            let parityBit = '';
+
+            if (parityMode === 'EVEN') {
+                // Even parity: total 1s including parity bit must be EVEN
+                parityBit = (onesCount % 2 === 0) ? '0' : '1';
+            } else if (parityMode === 'ODD') {
+                // Odd parity: total 1s including parity bit must be ODD
+                parityBit = (onesCount % 2 === 0) ? '1' : '0';
+            } else {
+                // Parity NONE
+                parityBit = '';
+            }
+
+            const finalBits = parityBit + dataBits;
+
+            return {
+                char,
+                codePoint,
+                dataBits,
+                parityBit,
+                finalBits,
+                totalBitLen: finalBits.length
+            };
+        }
+
+        /**
+         * Core Function: Encodes entire message text
+         */
+        function encodeMessage(text, encodingMode, parityMode) {
+            const charEncodings = [];
+            let bitStream = '';
+            let totalDataBits = 0;
+            let totalParityBits = 0;
+
+            for (let char of text) {
+                const enc = encodeCharacter(char, encodingMode, parityMode);
+                charEncodings.push(enc);
+                bitStream += (bitStream ? ' ' : '') + enc.finalBits;
+                totalDataBits += enc.dataBits.length;
+                totalParityBits += enc.parityBit.length;
+            }
+
+            return {
+                text,
+                encodingMode,
+                parityMode,
+                charEncodings,
+                bitStream, // Space separated bytes/words
+                rawBitStream: bitStream.replace(/\s+/g, ''),
+                stats: {
+                    length: text.length,
+                    dataBits: totalDataBits,
+                    parityBits: totalParityBits,
+                    totalBits: totalDataBits + totalParityBits
+                }
+            };
+        }
+
+        /**
+         * Core Function: Verify Parity Rule on a raw bit stream
+         */
+        function verifyParityStream(charEncodings, rawBitStream, parityMode) {
+            if (parityMode === 'NONE') return { passed: true, errors: [] };
+
+            let currentIndex = 0;
+            const errors = [];
+
+            for (let i = 0; i < charEncodings.length; i++) {
+                const enc = charEncodings[i];
+                const chunkLen = enc.finalBits.length;
+                const chunk = rawBitStream.substr(currentIndex, chunkLen);
+
+                if (chunk.length === chunkLen) {
+                    const ones = (chunk.match(/1/g) || []).length;
+                    if (parityMode === 'EVEN' && ones % 2 !== 0) {
+                        errors.push(i);
+                    } else if (parityMode === 'ODD' && ones % 2 === 0) {
+                        errors.push(i);
+                    }
+                } else {
+                    errors.push(i);
+                }
+                currentIndex += chunkLen;
+            }
+
+            return {
+                passed: errors.length === 0,
+                errors
+            };
+        }
+
+        /**
+         * Core Function: Decode bit stream back to string text
+         */
+        function decodeMessageFromStream(charEncodings, rawBitStream, parityMode) {
+            let currentIndex = 0;
+            let decodedText = '';
+
+            for (let i = 0; i < charEncodings.length; i++) {
+                const enc = charEncodings[i];
+                const chunkLen = enc.finalBits.length;
+                const chunk = rawBitStream.substr(currentIndex, chunkLen);
+
+                if (chunk.length === chunkLen) {
+                    // Parity bit is at index 0 if parityMode !== 'NONE'
+                    const dataBits = parityMode !== 'NONE' ? chunk.substring(1) : chunk;
+                    const codePoint = parseInt(dataBits, 2);
+                    if (!isNaN(codePoint)) {
+                        decodedText += String.fromCodePoint(codePoint);
+                    } else {
+                        decodedText += '?';
+                    }
+                } else {
+                    decodedText += '?';
+                }
+                currentIndex += chunkLen;
+            }
+
+            return decodedText;
+        }
+
+
+        /**
+         * Helper to create message object with dynamic computed transmission details
+         */
+        function createMessageObj(senderId, senderName, text, encoding, parity, status = 'received', timeStr = null) {
+            const id = 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+            const transmission = encodeMessage(text, encoding, parity);
+            const now = new Date();
+            const time = timeStr || now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+
+            return {
+                id,
+                senderId,
+                senderName,
+                text,
+                encoding,
+                parity,
+                transmission,
+                status, // 'sending', 'sent', 'delivered', 'received'
+                timestamp: time
+            };
+        }
+
+        function saveHistoryToLocalStorage() {
+            try {
+                localStorage.setItem('bit_messenger_store', JSON.stringify(messagesStore));
+            } catch (err) {
+                console.warn("Failed to write to LocalStorage:", err);
+            }
+        }
+
+        function loadHistoryFromLocalStorage() {
+            try {
+                const saved = localStorage.getItem('bit_messenger_store');
+                if (saved) {
+                    messagesStore = JSON.parse(saved);
+                }
+            } catch (err) {
+                console.warn("Failed to parse LocalStorage data:", err);
+            }
+        }
+
+        /* UI Rendering Functions */
+
+        function renderContactsList(filterQuery = '') {
+            const container = document.getElementById('contactsList');
+            container.innerHTML = '';
+
+            const filtered = CONTACTS.filter(c => 
+                c.name.toLowerCase().includes(filterQuery.toLowerCase())
+            );
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="p-4 text-center text-xs text-slate-500">
+                        No chats found.
+                    </div>
+                `;
+                return;
+            }
+
+            filtered.forEach(contact => {
+                const msgs = messagesStore[contact.id] || [];
+                const lastMsg = msgs.length > 0 ? msgs[msgs.length - 1].text : 'No messages yet';
+                const lastTime = msgs.length > 0 ? msgs[msgs.length - 1].timestamp : '';
+                const isActive = contact.id === APP_STATE.activeContactId;
+
+                const card = document.createElement('div');
+                card.className = `p-3 flex items-center space-x-3 cursor-pointer hover:bg-slate-800/60 transition-colors ${isActive ? 'bg-slate-800/90 border-l-2 border-cyan-500' : ''}`;
+                card.onclick = () => switchContact(contact.id);
+
+                card.innerHTML = `
+                    <div class="w-10 h-10 rounded-full ${contact.avatarBg} flex items-center justify-center font-bold text-sm shrink-0 relative">
+                        ${contact.name.charAt(0)}
+                        <span class="w-2.5 h-2.5 rounded-full ${contact.status === 'Online' ? 'bg-emerald-500' : 'bg-slate-500'} border-2 border-slate-900 absolute bottom-0 right-0"></span>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-xs font-semibold text-slate-200 truncate">${contact.name}</h3>
+                            <span class="text-[10px] text-slate-500 font-mono">${lastTime}</span>
+                        </div>
+                        <p class="text-[11px] text-slate-400 truncate mt-0.5">${escapeHtml(lastMsg)}</p>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function switchContact(contactId) {
+            APP_STATE.activeContactId = contactId;
+            const contact = CONTACTS.find(c => c.id === contactId);
+
+            document.getElementById('activeName').innerText = contact.name;
+            document.getElementById('activeAvatar').innerText = contact.name.charAt(0);
+            document.getElementById('activeAvatar').className = `w-10 h-10 rounded-full ${contact.avatarBg} flex items-center justify-center font-bold text-slate-950 shrink-0`;
+            document.getElementById('activeStatus').innerText = `${contact.status} • Simulation Mode`;
+
+            renderContactsList();
+            renderMessages();
+            toggleSidebar(false);
+        }
+
+
+        function renderMessages() {
+            const container = document.getElementById('chatMessages');
+            container.innerHTML = '';
+
+            const list = messagesStore[APP_STATE.activeContactId] || [];
+
+            if (list.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-12 text-slate-500 text-xs">
+                        No message history with this contact.<br>Send a message below to test transmission pipeline.
+                    </div>
+                `;
+                return;
+            }
+
+            list.forEach(msg => {
+                const isUser = msg.senderId === 'user';
+                const bubble = document.createElement('div');
+                bubble.className = `flex flex-col ${isUser ? 'items-end' : 'items-start'} space-y-1`;
+
+                let statusMarks = '✓✓';
+                if (msg.status === 'sending') statusMarks = '⏳';
+                else if (msg.status === 'sent') statusMarks = '✓';
+
+                bubble.innerHTML = `
+                    <div class="max-w-[85%] sm:max-w-[70%] rounded-2xl p-3 text-xs leading-relaxed ${
+                        isUser 
+                        ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-slate-950 font-medium rounded-br-none shadow-md shadow-cyan-950/30' 
+                        : 'bg-slate-800 border border-slate-700/70 text-slate-100 rounded-bl-none shadow-md'
+                    }">
+                        <div class="break-words font-sans text-sm">${escapeHtml(msg.text)}</div>
+                        
+                        <!-- Metadata and Data Inspection Button -->
+                        <div class="mt-2 pt-1.5 border-t ${isUser ? 'border-slate-950/20 text-slate-900' : 'border-slate-700/50 text-slate-400'} flex items-center justify-between text-[10px] space-x-3">
+                            <button onclick="openDetailsDrawer('${msg.id}')" class="font-mono font-bold hover:underline flex items-center gap-1 ${isUser ? 'text-slate-950 bg-cyan-400/30 px-1.5 py-0.5 rounded' : 'text-cyan-400 bg-slate-900 px-1.5 py-0.5 rounded'}">
+                                📊 View Data
+                            </button>
+                            <div class="flex items-center space-x-1 font-mono">
+                                <span>${msg.timestamp}</span>
+                                <span>${statusMarks}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(bubble);
+            });
+
+            container.scrollTop = container.scrollHeight;
+        }
+
+
+        function handleKeyDown(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                handleSendMessage(event);
+            }
+        }
+
+        // Live input check & character count
+        document.getElementById('messageInput').addEventListener('input', function() {
+            const val = this.value;
+            document.getElementById('charCount').innerText = `${val.length} chars`;
+
+            // Validate ASCII constraints if ASCII mode is selected
+            if (APP_STATE.encoding === 'ASCII') {
+                for (let char of val) {
+                    if (char.codePointAt(0) > 127) {
+                        showError("Character is not supported in ASCII mode. Switch to Unicode mode.");
+                        return;
+                    }
+                }
+            }
+            hideError();
+        });
+
+        function handleSendMessage(e) {
+            if (e) e.preventDefault();
+
+            const input = document.getElementById('messageInput');
+            const text = input.value.trim();
+
+            if (!text) {
+                showError("Message cannot be empty.");
+                return;
+            }
+
+            // ASCII validation pre-check
+            if (APP_STATE.encoding === 'ASCII') {
+                for (let char of text) {
+                    if (char.codePointAt(0) > 127) {
+                        showError("Character is not supported in ASCII mode. Switch to Unicode mode.");
+                        return;
+                    }
+                }
+            }
+
+            hideError();
+
+            try {
+                const msgObj = createMessageObj('user', 'Me', text, APP_STATE.encoding, APP_STATE.parity, 'sending');
+                messagesStore[APP_STATE.activeContactId].push(msgObj);
+                input.value = '';
+                document.getElementById('charCount').innerText = '0 chars';
+                renderMessages();
+
+                const animEnabled = document.getElementById('animToggle').checked;
+
+                if (animEnabled) {
+                    // Simulated step-by-step status progression
+                    setTimeout(() => {
+                        msgObj.status = 'sent';
+                        renderMessages();
+                    }, 500);
+
+                    setTimeout(() => {
+                        msgObj.status = 'delivered';
+                        renderMessages();
+                    }, 1000);
+
+                    setTimeout(() => {
+                        msgObj.status = 'received';
+                        renderMessages();
+                        saveHistoryToLocalStorage();
+                        renderContactsList();
+                    }, 1500);
+                } else {
+                    msgObj.status = 'received';
+                    renderMessages();
+                    saveHistoryToLocalStorage();
+                    renderContactsList();
+                }
+
+            } catch (err) {
+                showError(err.message || "Something went wrong while processing this message. Please try again.");
+            }
+        }
+
+
+        function openDetailsDrawer(msgId) {
+            const list = messagesStore[APP_STATE.activeContactId] || [];
+            const msg = list.find(m => m.id === msgId);
+            if (!msg) return;
+
+            APP_STATE.activeDrawerMsgId = msgId;
+            APP_STATE.tempAlteredStream = null;
+            APP_STATE.unverifiedDecode = false;
+
+            const tx = msg.transmission;
+
+            // Pipeline header info
+            document.getElementById('pipeOriginal').innerText = `"${msg.text}"`;
+            document.getElementById('pipeEncMode').innerText = msg.encoding;
+            document.getElementById('pipeParityMode').innerText = msg.parity;
+
+            // Stats
+            document.getElementById('statLength').innerText = `${tx.stats.length} chars`;
+            document.getElementById('statDataBits').innerText = `${tx.stats.dataBits} bits`;
+            document.getElementById('statParityBits').innerText = `${tx.stats.parityBits} bits`;
+            document.getElementById('statTotalBits').innerText = `${tx.stats.totalBits} bits`;
+
+            // Breakdown table
+            const tbody = document.getElementById('characterBreakdownBody');
+            tbody.innerHTML = '';
+            tx.charEncodings.forEach(enc => {
+                const tr = document.createElement('tr');
+                tr.className = 'border-b border-slate-900/60 hover:bg-slate-900/40';
+                tr.innerHTML = `
+                    <td class="py-2 text-cyan-400 font-bold">${escapeHtml(enc.char)}</td>
+                    <td class="py-2 text-slate-400">${enc.codePoint}</td>
+                    <td class="py-2 text-slate-300">${enc.dataBits}</td>
+                    <td class="py-2 text-purple-400 font-bold">${enc.parityBit || '-'}</td>
+                    <td class="py-2 text-cyan-300 font-mono">${enc.finalBits}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // Bit chips visualizer
+            renderBitChips(tx);
+
+            // Final Stream Box
+            document.getElementById('finalBitStreamBox').innerText = tx.bitStream;
+
+            // Error Sandbox Stream Views
+            document.getElementById('originalStreamCompare').innerText = tx.rawBitStream;
+            document.getElementById('receivedStreamCompare').innerText = tx.rawBitStream;
+
+            // Parity Check Reset
+            updateParityCheckUI(tx, tx.rawBitStream);
+
+            // Open Drawer overlay
+            const drawer = document.getElementById('detailsDrawer');
+            const content = document.getElementById('drawerContent');
+            drawer.classList.remove('opacity-0', 'pointer-events-none');
+            content.classList.remove('translate-x-full');
+        }
+
+        function closeDetailsDrawer() {
+            const drawer = document.getElementById('detailsDrawer');
+            const content = document.getElementById('drawerContent');
+            content.classList.add('translate-x-full');
+            drawer.classList.add('opacity-0', 'pointer-events-none');
+        }
+
+        function renderBitChips(tx) {
+            const container = document.getElementById('bitChipsContainer');
+            container.innerHTML = '';
+
+            tx.charEncodings.forEach(enc => {
+                const group = document.createElement('div');
+                group.className = 'p-2 rounded-lg bg-slate-900 border border-slate-800 flex flex-col items-center space-y-1';
+
+                const charLabel = document.createElement('span');
+                charLabel.className = 'text-[10px] font-bold text-cyan-400 font-mono';
+                charLabel.innerText = enc.char;
+
+                const bitsRow = document.createElement('div');
+                bitsRow.className = 'flex items-center space-x-1 font-mono text-xs';
+
+                // Parity bit chip (if present)
+                if (enc.parityBit) {
+                    const pChip = document.createElement('span');
+                    pChip.className = 'bit-chip px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 font-bold';
+                    pChip.title = 'Parity Bit (P)';
+                    pChip.innerText = enc.parityBit;
+                    bitsRow.appendChild(pChip);
+                }
+
+                // Data bits chips
+                for (let b of enc.dataBits) {
+                    const dChip = document.createElement('span');
+                    dChip.className = 'bit-chip px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700';
+                    dChip.title = 'Data Bit (D)';
+                    dChip.innerText = b;
+                    bitsRow.appendChild(dChip);
+                }
+
+                group.appendChild(charLabel);
+                group.appendChild(bitsRow);
+                container.appendChild(group);
+            });
+        }
+
+
+        function triggerBitFlip() {
+            const list = messagesStore[APP_STATE.activeContactId] || [];
+            const msg = list.find(m => m.id === APP_STATE.activeDrawerMsgId);
+            if (!msg) return;
+
+            const tx = msg.transmission;
+            let currentRaw = APP_STATE.tempAlteredStream || tx.rawBitStream;
+
+            if (!currentRaw || currentRaw.length === 0) return;
+
+            // Pick a random bit index to flip
+            const randIndex = Math.floor(Math.random() * currentRaw.length);
+            const originalBit = currentRaw.charAt(randIndex);
+            const flippedBit = originalBit === '0' ? '1' : '0';
+
+            const newRaw = currentRaw.substring(0, randIndex) + flippedBit + currentRaw.substring(randIndex + 1);
+            APP_STATE.tempAlteredStream = newRaw;
+
+            // Render highlighted stream comparison
+            renderStreamComparison(tx.rawBitStream, newRaw);
+            updateParityCheckUI(tx, newRaw);
+        }
+
+        function resetBitError() {
+            const list = messagesStore[APP_STATE.activeContactId] || [];
+            const msg = list.find(m => m.id === APP_STATE.activeDrawerMsgId);
+            if (!msg) return;
+
+            const tx = msg.transmission;
+            APP_STATE.tempAlteredStream = null;
+            APP_STATE.unverifiedDecode = false;
+
+            document.getElementById('originalStreamCompare').innerText = tx.rawBitStream;
+            document.getElementById('receivedStreamCompare').innerText = tx.rawBitStream;
+            updateParityCheckUI(tx, tx.rawBitStream);
+        }
+
+        function renderStreamComparison(origStr, recStr) {
+            let origHtml = '';
+            let recHtml = '';
+            let diffCount = 0;
+
+            for (let i = 0; i < origStr.length; i++) {
+                const o = origStr[i];
+                const r = recStr[i];
+
+                if (o !== r) {
+                    diffCount++;
+                    origHtml += `<span class="bg-slate-800 text-slate-400">${o}</span>`;
+                    recHtml += `<span class="bg-rose-900 text-rose-300 font-bold underline px-0.5 animate-pulse">${r}</span>`;
+                } else {
+                    origHtml += o;
+                    recHtml += r;
+                }
+            }
+
+            document.getElementById('originalStreamCompare').innerHTML = origHtml;
+            document.getElementById('receivedStreamCompare').innerHTML = recHtml;
+        }
+
+        function updateParityCheckUI(tx, currentRawStream) {
+            const verification = verifyParityStream(tx.charEncodings, currentRawStream, tx.parityMode);
+            const card = document.getElementById('parityCheckResultCard');
+            const icon = document.getElementById('parityCheckIcon');
+            const title = document.getElementById('parityCheckTitle');
+            const desc = document.getElementById('parityCheckDesc');
+            const badge = document.getElementById('alteredBitCount');
+            const decodeBtn = document.getElementById('decodeAnywayBtn');
+
+            // Calculate altered bits count
+            let diffCount = 0;
+            for (let i = 0; i < tx.rawBitStream.length; i++) {
+                if (tx.rawBitStream[i] !== currentRawStream[i]) diffCount++;
+            }
+
+            badge.innerText = `${diffCount} bit${diffCount === 1 ? '' : 's'} altered`;
+
+            if (verification.passed) {
+                card.className = 'p-3 rounded-lg border bg-emerald-950/40 border-emerald-800/80 text-emerald-300 text-xs flex items-center justify-between';
+                icon.innerText = '✓';
+                title.innerText = 'PARITY CHECK PASSED';
+                desc.innerText = 'Data passed the selected parity check rule.';
+                decodeBtn.classList.add('hidden');
+
+                // Decode standard text
+                const decodedText = decodeMessageFromStream(tx.charEncodings, currentRawStream, tx.parityMode);
+                document.getElementById('decodedTextResult').innerText = `"${decodedText}"`;
+                document.getElementById('decodedTextResult').className = 'font-mono text-base text-cyan-300 font-bold';
+            } else {
+                card.className = 'p-3 rounded-lg border bg-rose-950/40 border-rose-800/80 text-rose-300 text-xs flex items-center justify-between';
+                icon.innerText = '⚠';
+                title.innerText = 'PARITY ERROR DETECTED';
+                desc.innerText = 'The received bit pattern does not satisfy the selected parity rule (possible bit alteration).';
+                decodeBtn.classList.remove('hidden');
+
+                if (APP_STATE.unverifiedDecode) {
+                    const decodedText = decodeMessageFromStream(tx.charEncodings, currentRawStream, tx.parityMode);
+                    document.getElementById('decodedTextResult').innerText = `Unverified decoding: "${decodedText}"`;
+                    document.getElementById('decodedTextResult').className = 'font-mono text-sm text-amber-400 font-semibold italic';
+                } else {
+                    document.getElementById('decodedTextResult').innerText = '⚠ Cannot validate message (Parity Check Failed)';
+                    document.getElementById('decodedTextResult').className = 'font-mono text-sm text-rose-400 font-semibold';
+                }
+            }
+        }
+
+        function forceDecodeAnyway() {
+            APP_STATE.unverifiedDecode = true;
+            const list = messagesStore[APP_STATE.activeContactId] || [];
+            const msg = list.find(m => m.id === APP_STATE.activeDrawerMsgId);
+            if (!msg) return;
+
+            const tx = msg.transmission;
+            const currentRaw = APP_STATE.tempAlteredStream || tx.rawBitStream;
+            updateParityCheckUI(tx, currentRaw);
+        }
+
+        function copyBitStream() {
+            const text = document.getElementById('finalBitStreamBox').innerText;
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(() => {
+                    showCopyToast();
+                }).catch(() => {
+                    fallbackCopyText(text);
+                });
+            } else {
+                fallbackCopyText(text);
+            }
+        }
+
+        function fallbackCopyText(text) {
+            try {
+                const textArea = document.createElement("textarea");
+                textArea.value = text;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                showCopyToast();
+            } catch (err) {
+                showError("Unable to copy automatically. Please copy the bit stream manually.");
+            }
+        }
+
+        function showCopyToast() {
+            const btn = event?.currentTarget;
+            if (btn) {
+                const origText = btn.innerText;
+                btn.innerText = '✓ Copied!';
+                btn.classList.add('text-emerald-400');
+                setTimeout(() => {
+                    btn.innerText = origText;
+                    btn.classList.remove('text-emerald-400');
+                }, 1500);
+            }
+        }
+
+
+        function updateSettings() {
+            APP_STATE.encoding = document.getElementById('globalEncoding').value;
+            APP_STATE.parity = document.getElementById('globalParity').value;
+
+            document.getElementById('settingsStatusBadge').innerText = `${APP_STATE.encoding} • ${APP_STATE.parity}`;
+            document.getElementById('inputModeIndicator').innerText = `${APP_STATE.encoding} + ${APP_STATE.parity}`;
+
+            // Check existing textarea against new ASCII rules
+            const currentVal = document.getElementById('messageInput').value;
+            if (APP_STATE.encoding === 'ASCII') {
+                for (let char of currentVal) {
+                    if (char.codePointAt(0) > 127) {
+                        showError("Character is not supported in ASCII mode. Switch to Unicode mode.");
+                        return;
+                    }
+                }
+            }
+            hideError();
+        }
+
+        function updateSettingsUI() {
+            document.getElementById('globalEncoding').value = APP_STATE.encoding;
+            document.getElementById('globalParity').value = APP_STATE.parity;
+            updateSettings();
+        }
+
+        function filterContacts() {
+            const q = document.getElementById('searchInput').value;
+            renderContactsList(q);
+        }
+
+        function clearCurrentChat() {
+            messagesStore[APP_STATE.activeContactId] = [];
+            saveHistoryToLocalStorage();
+            renderMessages();
+            renderContactsList();
+        }
+
+        function toggleSidebar(show) {
+            const sidebar = document.getElementById('sidebar');
+            if (show) {
+                sidebar.classList.remove('-translate-x-full');
+            } else {
+                sidebar.classList.add('-translate-x-full');
+            }
+        }
+
+        function toggleInfoModal(show) {
+            const modal = document.getElementById('infoModal');
+            if (show) {
+                modal.classList.remove('opacity-0', 'pointer-events-none');
+            } else {
+                modal.classList.add('opacity-0', 'pointer-events-none');
+            }
+        }
+
+        function showError(msg) {
+            const alert = document.getElementById('errorAlert');
+            const txt = document.getElementById('errorMessage');
+            txt.innerText = msg;
+            alert.classList.remove('hidden');
+        }
+
+        function hideError() {
+            const alert = document.getElementById('errorAlert');
+            alert.classList.add('hidden');
+        }
+
+        function escapeHtml(str) {
+            return str
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#032;");
+        }
+
+        // Global Error Guardrail
+        window.onerror = function(message, source, lineno, colno, error) {
+            console.error("Global Error Caught:", message, error);
+            showError("Something went wrong while processing data. Please check your inputs.");
+            return true;
+        };
+    </script>
+</body>
+</html>
